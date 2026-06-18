@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leitura de Extrato PDF</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="panel upload-panel">
+      <div>
+        <p class="eyebrow">Extrato bancario</p>
+        <div class="brand-title">
+          <img src="/images.png" alt="Paroquia de Sao Tiago Menor">
+          <h1>System CSM</h1>
+        </div>
+        <p class="subtitle">Envie um extrato com varias paginas para separar debitos, creditos, totais e descricoes completas dos lancamentos.</p>
+      </div>
+
+      <form id="uploadForm" class="upload-form">
+        <label class="drop-zone" for="pdfFile">
+          <input id="pdfFile" name="pdf" type="file" accept="application/pdf,.pdf" required>
+          <span id="fileLabel">Selecionar PDF</span>
+          <small>Arquivos com aproximadamente 200 paginas sao aceitos.</small>
+        </label>
+
+        <button id="uploadButton" type="submit">Processar extrato</button>
+      </form>
+    </section>
+
+    <section class="summary-grid" aria-live="polite">
+      <div class="summary-item">
+        <span>Paginas lidas</span>
+        <strong id="pagesCount">0</strong>
+      </div>
+      <div class="summary-item">
+        <span>Debitos encontrados</span>
+        <strong id="entriesCount">0</strong>
+      </div>
+      <div class="summary-item">
+        <span>Creditos encontrados</span>
+        <strong id="creditsCount">0</strong>
+      </div>
+      <div class="summary-item credit-item">
+        <span>Entrou</span>
+        <strong id="creditValue">R$ 0,00</strong>
+      </div>
+      <div class="summary-item debit-item">
+        <span>Saiu</span>
+        <strong id="debitValue">R$ 0,00</strong>
+      </div>
+      <div class="summary-item total-item">
+        <span>Saldo</span>
+        <strong id="balanceValue">R$ 0,00</strong>
+      </div>
+    </section>
+
+    <section class="dashboard-grid">
+      <div class="panel chart-panel">
+        <div class="chart-header">
+          <h2>Entradas x saidas</h2>
+          <p>Comparativo de valores em credito e debito.</p>
+        </div>
+        <canvas id="barChart" width="640" height="320"></canvas>
+      </div>
+
+      <div class="panel chart-panel">
+        <div class="chart-header">
+          <h2>Distribuicao</h2>
+          <p>Participacao de creditos e debitos no extrato.</p>
+        </div>
+        <canvas id="donutChart" width="420" height="320"></canvas>
+      </div>
+    </section>
+
+    <section class="panel results-panel">
+      <div class="results-header">
+        <div>
+          <h2>Debitos</h2>
+          <p id="statusText">Nenhum arquivo processado ainda.</p>
+        </div>
+        <button id="downloadButton" type="button" disabled>Baixar PDF</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Seq.</th>
+              <th>Data</th>
+              <th>Descricao completa</th>
+              <th>Observacao</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr>
+              <td colspan="6" class="empty-state">Envie um PDF para visualizar os debitos.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/script.js"></script>
+</body>
+</html>
