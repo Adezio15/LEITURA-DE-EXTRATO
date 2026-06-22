@@ -4,6 +4,9 @@
   "description": "Sistema web para ler extratos bancarios em PDF e extrair lancamentos de debito.",
   "main": "server.js",
   "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
