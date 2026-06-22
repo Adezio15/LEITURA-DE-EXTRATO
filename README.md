@@ -17,3 +17,13 @@ npm start
 Ao iniciar, o sistema cria automaticamente a tabela `users` no Neon ou no SQLite local. Acesse `http://localhost:3000`; usuários sem sessão serão direcionados para `/login`.
 
 As senhas são armazenadas com hash `scrypt`, nunca em texto puro.
+
+## Publicação
+
+Configure estas variáveis diretamente no serviço de hospedagem, sem criar ou enviar um arquivo `.env`:
+
+- `DATABASE_URL`: string de conexão completa fornecida pelo Neon.
+- `NODE_ENV`: `production`.
+- `SESSION_SECRET`: chave aleatória com pelo menos 32 caracteres.
+
+O comando de inicialização é `npm start`. A rota pública `/health` confirma se a aplicação e o banco estão disponíveis. Em produção, se `DATABASE_URL` estiver presente, o sistema usa exclusivamente Neon/PostgreSQL e cria a tabela `users` automaticamente.

@@ -8,7 +8,13 @@ import PDFDocument from 'pdfkit';
 import pdfParse from 'pdf-parse';
 import XLSX from 'xlsx';
 import { fileURLToPath } from 'url';
-import { authenticateUser, createUser, findUserById, initializeDatabase } from './database.js';
+import {
+  authenticateUser,
+  checkDatabaseConnection,
+  createUser,
+  findUserById,
+  initializeDatabase
+} from './database.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -131,6 +137,15 @@ app.get('/login', (req, res) => {
 app.get('/cadastro', (req, res) => {
   if (readSession(req)) return res.redirect('/');
   res.sendFile(path.join(publicDir, 'cadastro.html'));
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    const database = await checkDatabaseConnection();
+    res.json({ status: 'ok', database });
+  } catch (error) {
+    res.status(503).json({ status: 'error', database: 'indisponivel' });
+  }
 });
 
 app.get('/', requireAuth, (req, res) => {

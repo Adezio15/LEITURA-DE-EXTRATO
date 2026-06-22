@@ -8,10 +8,17 @@ const usePostgres = Boolean(databaseUrl);
 const pool = usePostgres
   ? new Pool({
       connectionString: databaseUrl,
-      ssl: databaseUrl.includes('localhost') ? false : { rejectUnauthorized: false }
+      ssl: databaseUrl.includes('localhost') ? false : { rejectUnauthorized: false },
+      max: 5,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000
     })
   : null;
 const sqlite = usePostgres ? null : new DatabaseSync('database.sqlite');
+
+pool?.on('error', (error) => {
+  console.error('Erro inesperado em uma conexao ociosa do Neon:', error.message);
+});
 
 export async function initializeDatabase() {
   if (usePostgres) {
@@ -103,6 +110,16 @@ export async function findUserById(id) {
   return sqlite
     .prepare('SELECT id, name, email, created_at FROM users WHERE id = ? LIMIT 1')
     .get(id) || null;
+}
+
+export async function checkDatabaseConnection() {
+  if (usePostgres) {
+    await pool.query('SELECT 1');
+    return 'Neon/PostgreSQL';
+  }
+
+  sqlite.prepare('SELECT 1').get();
+  return 'SQLite local';
 }
 
 export default pool;
