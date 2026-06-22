@@ -4,7 +4,15 @@ import { DatabaseSync } from 'node:sqlite';
 
 const { Pool } = pg;
 const databaseUrl = process.env.DATABASE_URL?.trim();
-const usePostgres = Boolean(databaseUrl);
+const isExampleDatabaseUrl = /host-do-neon|usuario:senha/i.test(databaseUrl || '');
+const usePostgres = Boolean(databaseUrl) && !isExampleDatabaseUrl;
+
+if (isExampleDatabaseUrl) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('DATABASE_URL ainda contem o endereco de exemplo. Configure a URL real fornecida pelo Neon.');
+  }
+  console.warn('DATABASE_URL de exemplo ignorada; usando SQLite local.');
+}
 const pool = usePostgres
   ? new Pool({
       connectionString: databaseUrl,

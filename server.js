@@ -17,8 +17,12 @@ import {
 } from './database.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'development-only-change-this-secret';
+const configuredPort = Number.parseInt(process.env.PORT, 10);
+const PORT = Number.isInteger(configuredPort) && configuredPort > 0 ? configuredPort : 3000;
+const SESSION_SECRET =
+  process.env.SESSION_SECRET ||
+  process.env.SESSTION_SECRET ||
+  'development-only-change-this-secret';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -32,7 +36,11 @@ const MONEY_WITH_TYPE_PATTERN = new RegExp(
 );
 const MONEY_ONLY_PATTERN = new RegExp(`(?:R\\$\\s*)?(${MONEY_PATTERN_SOURCE})\\s*$`, 'i');
 
-if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+if (process.env.SESSTION_SECRET && !process.env.SESSION_SECRET) {
+  console.warn('A variavel SESSTION_SECRET foi aceita, mas renomeie-a para SESSION_SECRET.');
+}
+
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET && !process.env.SESSTION_SECRET) {
   throw new Error('SESSION_SECRET deve ser configurada no ambiente de producao.');
 }
 
