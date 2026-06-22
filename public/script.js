@@ -13,8 +13,26 @@ const debitValue = document.getElementById('debitValue');
 const balanceValue = document.getElementById('balanceValue');
 const barChart = document.getElementById('barChart');
 const donutChart = document.getElementById('donutChart');
+const currentUserName = document.getElementById('currentUserName');
+const logoutButton = document.getElementById('logoutButton');
 
 let currentEntries = [];
+
+async function loadCurrentUser() {
+  const response = await fetch('/api/auth/me');
+  if (!response.ok) {
+    window.location.href = '/login';
+    return;
+  }
+  const data = await response.json();
+  currentUserName.textContent = data.user?.name || data.user?.email || 'Usuário';
+}
+
+logoutButton?.addEventListener('click', async () => {
+  logoutButton.disabled = true;
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/login';
+});
 
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString('pt-BR', {
@@ -288,3 +306,4 @@ downloadButton.addEventListener('click', async () => {
 });
 
 resetDashboard();
+loadCurrentUser();

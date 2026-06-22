@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro | System CSM</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/auth.css">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="panel auth-brand">
+      <p class="eyebrow">Leitura de extrato</p>
+      <div class="brand-title">
+        <img src="/images.png" alt="Paróquia de São Tiago Menor">
+        <h1>System CSM</h1>
+      </div>
+      <p class="subtitle">Crie seu acesso para processar extratos e visualizar os resultados no dashboard.</p>
+    </section>
+
+    <section class="panel auth-card">
+      <div>
+        <p class="eyebrow">Nova conta</p>
+        <h2>Criar cadastro</h2>
+        <p class="auth-description">Seus dados serão armazenados com segurança.</p>
+      </div>
+
+      <form class="auth-form" data-auth-form="cadastro">
+        <label for="name">Nome completo</label>
+        <input id="name" name="name" type="text" autocomplete="name" maxlength="120" placeholder="Seu nome" required>
+
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="seu@email.com" required>
+
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo de 8 caracteres" required>
+
+        <label for="passwordConfirmation">Confirmar senha</label>
+        <input id="passwordConfirmation" name="passwordConfirmation" type="password" autocomplete="new-password" minlength="8" placeholder="Repita a senha" required>
+
+        <p class="auth-message" role="alert" aria-live="polite"></p>
+        <button type="submit">Cadastrar</button>
+      </form>
+
+      <div class="auth-switch">
+        <p>Já possui uma conta?</p>
+        <a class="auth-secondary-button" href="/login">Fazer login</a>
+      </div>
+    </section>
+  </main>
+  <script src="/auth.js"></script>
+</body>
+</html>

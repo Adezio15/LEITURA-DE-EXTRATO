@@ -41,6 +41,34 @@ input {
   box-shadow: var(--shadow);
 }
 
+.dashboard-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 16px 20px;
+}
+
+.dashboard-topbar .eyebrow {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.secondary-button {
+  min-width: 92px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--accent-dark);
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #e8f5f3;
+}
+
 .upload-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);

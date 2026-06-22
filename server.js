@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import crypto from 'crypto';
 import express from 'express';
 import fs from 'fs';
@@ -7,9 +8,11 @@ import PDFDocument from 'pdfkit';
 import pdfParse from 'pdf-parse';
 import XLSX from 'xlsx';
 import { fileURLToPath } from 'url';
+import { authenticateUser, createUser, findUserById, initializeDatabase } from './database.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SESSION_SECRET = process.env.SESSION_SECRET || 'development-only-change-this-secret';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -22,6 +25,10 @@ const MONEY_WITH_TYPE_PATTERN = new RegExp(
   'gi'
 );
 const MONEY_ONLY_PATTERN = new RegExp(`(?:R\\$\\s*)?(${MONEY_PATTERN_SOURCE})\\s*$`, 'i');
+
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET deve ser configurada no ambiente de producao.');
+}
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -54,8 +61,151 @@ const upload = multer({
   }
 });
 
-app.use(express.static(publicDir));
+app.get('/index.html', requireAuth, (req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+app.use(express.static(publicDir, { index: false }));
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false }));
+
+function parseCookies(req) {
+  return String(req.headers.cookie || '')
+    .split(';')
+    .map((part) => part.trim().split('='))
+    .reduce((cookies, [key, ...value]) => {
+      if (key) cookies[key] = decodeURIComponent(value.join('='));
+      return cookies;
+    }, {});
+}
+
+function signSession(userId) {
+  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const payload = `${userId}.${expiresAt}`;
+  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+  return `${payload}.${signature}`;
+}
+
+function readSession(req) {
+  const token = parseCookies(req).session;
+  const [userId, expiresAt, signature] = String(token || '').split('.');
+  if (!userId || !expiresAt || !signature || Number(expiresAt) < Date.now()) return null;
+
+  const payload = `${userId}.${expiresAt}`;
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+  const receivedBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (receivedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(receivedBuffer, expectedBuffer)) {
+    return null;
+  }
+  return userId;
+}
+
+function setSessionCookie(res, userId) {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `session=${encodeURIComponent(signSession(userId))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${secure}`
+  );
+}
+
+function clearSessionCookie(res) {
+  res.setHeader('Set-Cookie', 'session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');
+}
+
+function requireAuth(req, res, next) {
+  const userId = readSession(req);
+  if (!userId) {
+    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Sessao expirada. Entre novamente.' });
+    return res.redirect('/login');
+  }
+  req.userId = userId;
+  next();
+}
+
+app.get('/login', (req, res) => {
+  if (readSession(req)) return res.redirect('/');
+  res.sendFile(path.join(publicDir, 'login.html'));
+});
+
+app.get('/cadastro', (req, res) => {
+  if (readSession(req)) return res.redirect('/');
+  res.sendFile(path.join(publicDir, 'cadastro.html'));
+});
+
+app.get('/', requireAuth, (req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+app.post('/api/auth/cadastro', async (req, res, next) => {
+  try {
+    const name = String(req.body.name || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    const passwordConfirmation = String(req.body.passwordConfirmation || '');
+
+    if (!name || !email || !password || !passwordConfirmation) {
+      return res.status(400).json({ error: 'Preencha todos os campos.' });
+    }
+    if (name.length > 120) {
+      return res.status(400).json({ error: 'O nome deve ter no maximo 120 caracteres.' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Informe um e-mail valido.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres.' });
+    }
+    if (password.length > 128) {
+      return res.status(400).json({ error: 'A senha deve ter no maximo 128 caracteres.' });
+    }
+    if (password !== passwordConfirmation) {
+      return res.status(400).json({ error: 'As senhas nao conferem.' });
+    }
+
+    const user = await createUser({ name, email, password });
+    return res.status(201).json({ user });
+  } catch (error) {
+    if (error.code === '23505' || String(error.code || '').includes('SQLITE_CONSTRAINT')) {
+      return res.status(409).json({ error: 'Este e-mail ja esta cadastrado.' });
+    }
+    next(error);
+  }
+});
+
+app.post('/api/auth/login', async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    if (!email || !password) return res.status(400).json({ error: 'Informe e-mail e senha.' });
+
+    const user = await authenticateUser(email, password);
+    if (!user) return res.status(401).json({ error: 'E-mail ou senha invalidos.' });
+
+    setSessionCookie(res, user.id);
+    return res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/auth/me', requireAuth, async (req, res, next) => {
+  try {
+    const user = await findUserById(req.userId);
+    if (!user) {
+      clearSessionCookie(res);
+      return res.status(401).json({ error: 'Usuario nao encontrado.' });
+    }
+    return res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  clearSessionCookie(res);
+  res.json({ success: true });
+});
 
 function normalizeSpaces(text) {
   return String(text || '')
@@ -509,7 +659,7 @@ function buildWorkbook(entries, summary = summarizeEntries(entries)) {
   return workbook;
 }
 
-app.post('/api/upload', upload.single('pdf'), async (req, res, next) => {
+app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res, next) => {
   if (!req.file) {
     res.status(400).json({ error: 'Nenhum PDF foi enviado.' });
     return;
@@ -556,7 +706,7 @@ app.post('/api/upload', upload.single('pdf'), async (req, res, next) => {
   }
 });
 
-app.post('/api/export', (req, res, next) => {
+app.post('/api/export', requireAuth, (req, res, next) => {
   try {
     const entries = Array.isArray(req.body.entries) ? req.body.entries : [];
 
@@ -591,17 +741,29 @@ app.use((error, req, res, next) => {
   res.status(status).json({ error: message });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
+async function startServer() {
+  try {
+    const databaseName = await initializeDatabase();
+    console.log(`Banco de dados ${databaseName} conectado e tabela de usuarios pronta.`);
 
-server.on('error', (error) => {
-  if (error.code === 'EADDRINUSE') {
-    console.error(`A porta ${PORT} ja esta em uso. Feche o outro servidor ou inicie com outra porta:`);
-    console.error(`$env:PORT=3001; npm start`);
+    const server = app.listen(PORT, () => {
+      console.log(`Servidor rodando em http://localhost:${PORT}`);
+    });
+
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`A porta ${PORT} ja esta em uso. Feche o outro servidor ou inicie com outra porta:`);
+        console.error(`$env:PORT=3001; npm start`);
+        process.exit(1);
+      }
+
+      console.error('Erro ao iniciar o servidor:', error.message);
+      process.exit(1);
+    });
+  } catch (error) {
+    console.error('Erro ao conectar ao Neon:', error.message);
     process.exit(1);
   }
+}
 
-  console.error('Erro ao iniciar o servidor:', error.message);
-  process.exit(1);
-});
+startServer();

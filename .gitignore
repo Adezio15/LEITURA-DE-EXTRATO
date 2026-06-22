@@ -1,0 +1,6 @@
+node_modules/
+.env
+uploads/
+database.sqlite
+database.sqlite-*
+npm-debug.log*
