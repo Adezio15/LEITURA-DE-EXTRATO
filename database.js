@@ -1,7 +1,6 @@
 import crypto from 'crypto';
-import pg from 'pg';
+import { neon } from '@neondatabase/serverless';
 
-const { Pool } = pg;
 const databaseUrl = process.env.DATABASE_URL?.trim();
 const isDevelopmentMode = process.env.MODE_NODE === 'dev';
 const isExampleDatabaseUrl = /host-do-neon|usuario:senha/i.test(databaseUrl || '');
@@ -14,24 +13,16 @@ if (!isDevelopmentMode && (!databaseUrl || isExampleDatabaseUrl)) {
 if (isDevelopmentMode) {
   console.log('Modo de desenvolvimento: SQLite local selecionado.');
 }
-const pool = usePostgres
-  ? new Pool({
-      connectionString: databaseUrl,
-      ssl: databaseUrl.includes('localhost') ? false : { rejectUnauthorized: false },
-      max: 5,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 10_000
-    })
-  : null;
+const sql = usePostgres ? neon(databaseUrl, { fullResults: true }) : null;
 let sqlite = null;
 
-pool?.on('error', (error) => {
-  console.error('Erro inesperado em uma conexao ociosa do Neon:', error.message);
-});
+function postgresQuery(query, params = []) {
+  return sql.query(query, params);
+}
 
 export async function initializeDatabase() {
   if (usePostgres) {
-    await pool.query(`
+    await postgresQuery(`
       CREATE TABLE IF NOT EXISTS users (
         id BIGSERIAL PRIMARY KEY,
         name VARCHAR(120) NOT NULL,
@@ -78,7 +69,7 @@ export async function createUser({ name, email, password }) {
   const passwordHash = hashPassword(password);
 
   if (usePostgres) {
-    const result = await pool.query(
+    const result = await postgresQuery(
       `INSERT INTO users (name, email, password_hash)
        VALUES ($1, $2, $3)
        RETURNING id, name, email, created_at`,
@@ -97,7 +88,7 @@ export async function authenticateUser(email, password) {
   const normalizedEmail = email.toLowerCase();
   const user = usePostgres
     ? (
-        await pool.query(
+        await postgresQuery(
           'SELECT id, name, email, password_hash FROM users WHERE email = $1 LIMIT 1',
           [normalizedEmail]
         )
@@ -111,7 +102,7 @@ export async function authenticateUser(email, password) {
 
 export async function findUserById(id) {
   if (usePostgres) {
-    const result = await pool.query(
+    const result = await postgresQuery(
       'SELECT id, name, email, created_at FROM users WHERE id = $1 LIMIT 1',
       [id]
     );
@@ -125,7 +116,7 @@ export async function findUserById(id) {
 
 export async function checkDatabaseConnection() {
   if (usePostgres) {
-    await pool.query('SELECT 1');
+    await postgresQuery('SELECT 1');
     return 'Neon/PostgreSQL';
   }
 
@@ -133,4 +124,4 @@ export async function checkDatabaseConnection() {
   return 'SQLite local';
 }
 
-export default pool;
+export default sql;
