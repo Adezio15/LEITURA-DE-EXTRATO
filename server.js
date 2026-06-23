@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import crypto from 'crypto';
 import express from 'express';
 import fs from 'fs';
@@ -15,6 +15,8 @@ import {
   findUserById,
   initializeDatabase
 } from './database.js';
+
+dotenv.config();
 
 const app = express();
 const configuredPort = Number.parseInt(process.env.PORT, 10);
