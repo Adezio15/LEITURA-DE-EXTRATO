@@ -27,3 +27,6 @@ Configure estas variáveis diretamente no serviço de hospedagem, sem criar ou e
 - `SESSION_SECRET`: chave aleatória com pelo menos 32 caracteres.
 
 O comando de inicialização é `npm start`. A rota pública `/health` confirma se a aplicação e o banco estão disponíveis. Em produção, se `DATABASE_URL` estiver presente, o sistema usa exclusivamente Neon/PostgreSQL e cria a tabela `users` automaticamente.
+
+- `npm run dev`: força o uso do SQLite local, mesmo que exista uma `DATABASE_URL`.
+- `npm start`: exige uma `DATABASE_URL` real e usa exclusivamente o Neon/PostgreSQL.

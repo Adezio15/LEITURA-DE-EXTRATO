@@ -3,14 +3,16 @@ import pg from 'pg';
 
 const { Pool } = pg;
 const databaseUrl = process.env.DATABASE_URL?.trim();
+const isDevelopmentMode = process.env.MODE_NODE === 'dev';
 const isExampleDatabaseUrl = /host-do-neon|usuario:senha/i.test(databaseUrl || '');
-const usePostgres = Boolean(databaseUrl) && !isExampleDatabaseUrl;
+const usePostgres = !isDevelopmentMode && Boolean(databaseUrl) && !isExampleDatabaseUrl;
 
-if (isExampleDatabaseUrl) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('DATABASE_URL ainda contem o endereco de exemplo. Configure a URL real fornecida pelo Neon.');
-  }
-  console.warn('DATABASE_URL de exemplo ignorada; usando SQLite local.');
+if (!isDevelopmentMode && (!databaseUrl || isExampleDatabaseUrl)) {
+  throw new Error('npm start exige uma DATABASE_URL real do Neon. Para usar SQLite local, execute npm run dev.');
+}
+
+if (isDevelopmentMode) {
+  console.log('Modo de desenvolvimento: SQLite local selecionado.');
 }
 const pool = usePostgres
   ? new Pool({
