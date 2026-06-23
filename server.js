@@ -42,7 +42,7 @@ if (process.env.SESSTION_SECRET && !process.env.SESSION_SECRET) {
   console.warn('A variavel SESSTION_SECRET foi aceita, mas renomeie-a para SESSION_SECRET.');
 }
 
-if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET && !process.env.SESSTION_SECRET) {
+if (process.env.MODE_NODE === 'production' && !process.env.SESSION_SECRET && !process.env.SESSTION_SECRET) {
   throw new Error('SESSION_SECRET deve ser configurada no ambiente de producao.');
 }
 
